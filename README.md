@@ -1,41 +1,47 @@
 # Mattermost Data Retention Using Docker Compose
 
-The `mattermost-retention.sh` script is a management and cleanup script used to retain only a specific number of days of messages and files for a Mattermost server. The main tasks performed by the script are as follows:
+The `mattermost-retention.sh` script assists in managing and cleaning up your Mattermost server to retain only a specific number of days' worth of messages and files. The steps performed by the script include:
 
-1. **Environment Setup**: It establishes the necessary environment variables for database connection details, Mattermost hostname, retention days, Mattermost data directory path, and Docker Compose file path.
+1. **Environment Setup**: The script sets up the essential environment variables required for database connections, such as database name, user, password, host, and other related configurations like the Mattermost hostname, retention days, and Mattermost data directory.
 
-2. **Cron Job Replacement**: The script first removes any existing cron jobs that involve itself and then creates a new one scheduled to run at 8 AM UTC daily.
+2. **Container Identification**: Based on the Docker images used by the PostgreSQL and Mattermost services, the script identifies the running containers' IDs. This makes the script flexible, not relying on fixed container names.
 
-3. **Retention Time Calculation**: It calculates the timestamp corresponding to the retention days specified in the past.
+3. **Cron Job Management**: For automation, the script first removes any existing cron jobs related to itself and then schedules a new one to run at 8 AM UTC daily.
 
-4. **Database Operations**: The script interacts with the database (either PostgreSQL or MySQL, based on the configuration) running inside a Docker container.
+4. **Retention Time Calculation**: The script computes the timestamp that corresponds to the specified retention days in the past.
 
-   The operations include:
-    * Retrieving the paths of files that were created before the retention date and storing these paths in a temporary file.
-    * Deleting posts and file information from the database that were created before the retention date.
-    * File Deletion: The script reads the file paths stored in the temporary file and deletes each file from the Mattermost server running inside a Docker container.
+5. **Database Interactions**: Depending on whether you're using PostgreSQL or MySQL (based on your configuration), the script communicates with the database running inside a Docker container to:
+    * Fetch file paths of files created before the retention date and save these paths in a temporary file.
+    * Delete posts and file information that were created before the retention date.
 
-5. **Directory Cleanup**: The script removes the temporary file used for storing file paths and deletes any empty directories in the Mattermost data directory.
+6. **File Deletion**: The script accesses the file paths from the temporary file and erases each one from the Mattermost server running within a Docker container.
 
-By performing these tasks, the script ensures that only the specified number of days of messages and files are retained on the Mattermost server, helping manage the storage used by Mattermost more effectively.
+7. **Cleanup**: The script gets rid of the temporary file and removes any empty directories in the Mattermost data path.
 
-# Run the Script
+By executing these steps, the script ensures that the Mattermost server retains only messages and files from the specified retention days, allowing you to manage storage more efficiently.
 
-You need to replace the environment variables at the top of the script `mattermost-retention.sh` to meet your requirements.
+## Running the Script
 
-Before you can run the script, you need to make it executable. Use the chmod command to update the script's permissions:
+Before executing the script, update the environment variables at the beginning of the `mattermost-retention.sh` to match your configuration.
 
-`chmod +x mattermost-retention.sh`
+To make the script executable, modify its permissions using:
 
-Once the script is executable, you can run it:
+```
+chmod +x mattermost-retention.sh
+```
 
-`./mattermost-retention.sh`
+After this, you can run the script with:
 
-# mattermost-retention.sh Logs
+```
+./mattermost-retention.sh
+```
 
-Once the `mattermost-retention.sh` has been added to crontab and has run, you can check its logs to confirm whether it ran successfully or encountered any errors.
+## Viewing Logs
 
-The logs for `mattermost-retention.sh` can always be found in the same folder where you run the script.
+After adding `mattermost-retention.sh` to the crontab and it has executed, you can check the logs to verify if it operated successfully or if there were any issues.
+
+You can find the logs for `mattermost-retention.sh` in the directory from which you initiated the script.
+
 
 # Author
 
