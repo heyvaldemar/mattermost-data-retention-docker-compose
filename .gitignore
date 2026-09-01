@@ -281,4 +281,6 @@ xcuserdata/
 /*.gcno
 **/xcshareddata/WorkspaceSettings.xcsettings
 
-# End of https://www.toptal.com/developers/gitignore/api/git,macos,xcode,jekyll,packer,ansible,vagrant,windows,notepadpp,terraform,powershell,terragrunt,sublimetext,ansibletower,visualstudiocode,linux
+# End of https://www.toptal.com/developers/gitignore/api/git,macos,xcode,jekyll,packer,ansible,vagrant,windows,notepadpp,terraform,powershell,terragrunt,sublimetext,ansibletower,visualstudiocode,linux# Local retention config with the database password - never commit
+mattermost-retention.conf
+mattermost-retention.log

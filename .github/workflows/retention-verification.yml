@@ -1,0 +1,127 @@
+name: Retention Script Verification
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Weekly run to catch environment drift.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: retention-verification-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint shell scripts and workflow YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            koalaman/shellcheck-alpine:stable \
+            shellcheck ./*.sh
+
+      - name: actionlint (GitHub Actions workflow linting)
+        run: |
+          docker run --rm -v "$PWD:/mnt" -w /mnt \
+            rhysd/actionlint:1.7.12 \
+            -color
+
+  retention-test:
+    name: Run the retention script against a real Postgres + data dir
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Start a Postgres container with Mattermost-shaped tables
+        run: |
+          DB_PASS="$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)"
+          echo "::add-mask::$DB_PASS"
+          echo "DB_PASS=$DB_PASS" >> "$GITHUB_ENV"
+          docker run -d --name retention-postgres \
+            -e POSTGRES_DB=mattermostdb \
+            -e POSTGRES_USER=mattermostdbuser \
+            -e POSTGRES_PASSWORD="$DB_PASS" \
+            postgres:16
+          timeout 2m bash -c 'until docker exec retention-postgres pg_isready -q -U mattermostdbuser -d mattermostdb; do sleep 2; done'
+          docker exec -e PGPASSWORD="$DB_PASS" retention-postgres psql -h 127.0.0.1 -U mattermostdbuser mattermostdb -c "
+            create table posts (id serial, createat bigint, message text);
+            create table fileinfo (id serial, createat bigint, path text, thumbnailpath text, previewpath text);"
+
+      - name: Start a stand-in Mattermost container with old and new files
+        # The script matches containers by image name and deletes files via
+        # a helper container sharing its volumes (the real mattermost
+        # images are distroless — no shell to exec into). A busybox
+        # retagged with the mattermost name plus a data volume exercises
+        # exactly that path.
+        run: |
+          docker pull -q busybox:stable
+          docker tag busybox:stable mattermost/mattermost-team-edition:citest
+          docker run -d --name retention-mattermost \
+            -v mmdata:/mattermost/data \
+            mattermost/mattermost-team-edition:citest sleep infinity
+          docker exec retention-mattermost mkdir -p /mattermost/data/old /mattermost/data/new
+          docker exec retention-mattermost sh -c 'echo x > /mattermost/data/old/expired.txt'
+          docker exec retention-mattermost sh -c 'echo x > /mattermost/data/new/current.txt'
+
+      - name: Seed rows on both sides of the retention cutoff
+        run: |
+          old_ts=$(( ($(date +%s) - 60*24*3600) * 1000 ))
+          new_ts=$(( $(date +%s) * 1000 ))
+          docker exec -e PGPASSWORD="$DB_PASS" retention-postgres psql -h 127.0.0.1 -U mattermostdbuser mattermostdb -c "
+            insert into posts (createat, message) values ($old_ts, 'old post'), ($new_ts, 'new post');
+            insert into fileinfo (createat, path, thumbnailpath, previewpath) values
+              ($old_ts, 'old/expired.txt', '', ''),
+              ($new_ts, 'new/current.txt', '', '');"
+
+      - name: Run the retention script
+        env:
+          DB_HOST: 127.0.0.1
+          RETENTION: "30"
+          INSTALL_CRON: "false"
+        run: |
+          chmod +x mattermost-retention.sh
+          ./mattermost-retention.sh
+
+      - name: Verify only expired data was removed
+        run: |
+          posts="$(docker exec -e PGPASSWORD="$DB_PASS" retention-postgres psql -h 127.0.0.1 -U mattermostdbuser mattermostdb -t -A -c 'select message from posts;')"
+          echo "remaining posts: $posts"
+          [ "$posts" = "new post" ] || { echo "::error::post retention failed"; exit 1; }
+          if docker exec retention-mattermost test -f /mattermost/data/old/expired.txt; then
+            echo "::error::expired file was not deleted"
+            exit 1
+          fi
+          docker exec retention-mattermost test -f /mattermost/data/new/current.txt || {
+            echo "::error::current file was wrongly deleted"; exit 1; }
+          if docker exec retention-mattermost test -d /mattermost/data/old; then
+            echo "::error::empty directory was not pruned"
+            exit 1
+          fi
+          echo "Retention behaved correctly: old data gone, new data intact"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f retention-postgres retention-mattermost || true
+          docker volume rm mmdata || true
