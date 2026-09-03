@@ -14,8 +14,8 @@ _(no unreleased changes yet)_
 ### Fixed (the script did not work against current Mattermost images)
 
 - **File deletion moved to a helper container.** Current
-  `mattermost/mattermost-team-edition` images are distroless — no shell,
-  no `shred`, no `find` — so every `docker exec` file operation in the
+  `mattermost/mattermost-team-edition` images are distroless, no shell,
+  no `shred`, no `find`, so every `docker exec` file operation in the
   old script failed. Expired rows were deleted from the database while
   the files stayed on disk forever. Cleanup now runs in a throwaway
   `debian:stable-slim` container sharing the Mattermost container's
