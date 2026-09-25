@@ -1,6 +1,7 @@
 # Mattermost Data Retention
 
 [![Retention Script Verification](https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/actions/workflows/retention-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/actions/workflows/retention-verification.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14910/badge)](https://www.bestpractices.dev/projects/14910)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 `mattermost-retention.sh` keeps a dockerized Mattermost server down to a fixed number of days of history: it deletes older posts from the database, shreds the matching uploaded files, and prunes empty data directories. Team Edition has no built-in data retention (that's an Enterprise feature). This script is the self-hosted answer.
