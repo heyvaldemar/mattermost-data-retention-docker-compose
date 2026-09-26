@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.1.0] - 2026-09-26
+
 ### Added
 
 - **`DB_CONTAINER` and `MATTERMOST_CONTAINER`** name the containers to use. Discovery by image name took whichever PostgreSQL or MySQL container `docker ps` listed first, which on a host running more than one database is not necessarily Mattermost's. Empty keeps the discovery.
