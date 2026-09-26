@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Added
+
+- **`DB_CONTAINER` and `MATTERMOST_CONTAINER`** name the containers to use. Discovery by image name took whichever PostgreSQL or MySQL container `docker ps` listed first, which on a host running more than one database is not necessarily Mattermost's. Empty keeps the discovery.
+- **The end-to-end test runs anywhere Docker does, and is shown to fail.** `tests/e2e-retention.sh` is the CI test lifted out of the workflow, with a post and an upload 20 days old that a 30-day retention has to keep; `tests/plant-violations.py` breaks the script six ways on a copy and requires the test to notice each.
 
 ## [1.0.0] - 2026-09-01
 

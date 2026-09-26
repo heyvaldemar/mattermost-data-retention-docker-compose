@@ -59,7 +59,12 @@ tail -f mattermost-retention.log
 
 ## Testing
 
-The [Retention Script Verification](https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/actions/workflows/retention-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and weekly: shellcheck + actionlint, then an integration test that boots a real PostgreSQL with Mattermost-shaped tables, seeds posts and files on both sides of the cutoff, runs the script, and asserts that expired data is gone while current data survives.
+The [Retention Script Verification](https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/actions/workflows/retention-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and weekly: shellcheck and actionlint, then [`tests/e2e-retention.sh`](tests/e2e-retention.sh), which boots a real PostgreSQL with Mattermost-shaped tables and a stand-in data volume, seeds posts and uploads 60, 20 and 0 days old, runs the script with `RETENTION=30`, and asserts that only the 60-day-old data is gone: the posts, the file records, the uploads and their thumbnails, and the directories left empty, while the data directory and everything inside the window stay. [`tests/plant-violations.py`](tests/plant-violations.py) then breaks the script six ways on a copy, listed in [`tests/plants.tsv`](tests/plants.tsv), and fails the run if the test stays green through any of them.
+
+```bash
+./tests/e2e-retention.sh
+python3 tests/plant-violations.py -- ./tests/e2e-retention.sh
+```
 
 ## Security notes
 

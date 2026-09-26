@@ -1,0 +1,7 @@
+# file	old	new	what the test must notice
+"mattermost-retention.sh"	"delete from posts where createat < $delete_before;"	"delete from posts where createat > $delete_before;"	"the post cutoff reversed: new posts deleted, old kept"
+"mattermost-retention.sh"	"RETENTION * 86400"	"RETENTION * 8640"	"the window computed ten times too short"
+"mattermost-retention.sh"	"shred -u \"$DATA_PATH$fp\""	"true \"$DATA_PATH$fp\""	"expired uploads left on disk"
+"mattermost-retention.sh"	"select thumbnailpath from fileinfo where createat < $delete_before;\" >> \"$PATHS_LIST\""	"select 1 where false;\" >> \"$PATHS_LIST\""	"thumbnails of expired uploads left behind"
+"mattermost-retention.sh"	"find \"$DATA_PATH\" -mindepth 1 -type d -empty -delete"	"true"	"emptied directories left behind"
+"mattermost-retention.sh"	"-t -c \"delete from fileinfo where createat < $delete_before;\""	"-t -c \"select 1;\""	"expired file records left in the database"

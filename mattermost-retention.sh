@@ -16,9 +16,13 @@
 #   DATA_PATH="/mattermost/data/"
 #   INSTALL_CRON="true"            # re-install the daily 08:00 cron entry
 #   HELPER_IMAGE="debian:stable-slim"  # used for file deletion (see below)
+#   DB_CONTAINER=""                # name or id; empty = discover by image
+#   MATTERMOST_CONTAINER=""        # name or id; empty = discover by image
 #
 # The script discovers the containers by image name, so it does not depend
-# on fixed container names. File deletion runs in a throwaway helper
+# on fixed container names. On a host that runs more than one PostgreSQL or
+# MySQL container, discovery takes whichever `docker ps` lists first; name
+# the containers with DB_CONTAINER and MATTERMOST_CONTAINER there. File deletion runs in a throwaway helper
 # container sharing the Mattermost container's volumes: current
 # mattermost/mattermost-team-edition images are distroless (no shell, no
 # shred), so exec'ing into them stopped being possible.
@@ -46,8 +50,8 @@ HELPER_IMAGE="${HELPER_IMAGE:-debian:stable-slim}"
 : "${DB_PASS:?Set DB_PASS in the environment or in mattermost-retention.conf (never commit it)}"
 
 # Determine the PostgreSQL/MySQL and Mattermost container IDs by image
-POSTGRES_CONTAINER_ID=$(docker ps --format '{{.ID}}\t{{.Image}}' | grep -E 'postgres:|mysql:' | awk '{print $1}' | head -1)
-MATTERMOST_CONTAINER_ID=$(docker ps --format '{{.ID}}\t{{.Image}}' | grep 'mattermost/mattermost' | awk '{print $1}' | head -1)
+POSTGRES_CONTAINER_ID="${DB_CONTAINER:-$(docker ps --format '{{.ID}}\t{{.Image}}' | grep -E 'postgres:|mysql:' | awk '{print $1}' | head -1)}"
+MATTERMOST_CONTAINER_ID="${MATTERMOST_CONTAINER:-$(docker ps --format '{{.ID}}\t{{.Image}}' | grep 'mattermost/mattermost' | awk '{print $1}' | head -1)}"
 
 if [ -z "$POSTGRES_CONTAINER_ID" ]; then
     echo "Database container not running!"
