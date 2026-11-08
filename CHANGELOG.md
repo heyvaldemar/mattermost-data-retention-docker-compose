@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.1.1] - 2026-11-08
+
 ### Security
 
 - **The database password is no longer on any command line.** `mattermost-retention.sh` built `docker exec -e PGPASSWORD=<password>` (unquoted, too) and gave MySQL `--password=<password>`. Every user on the host reads a process's arguments with `ps`, and each `docker exec` stays up for as long as its statement runs, a long `DELETE` included. The script now exports `PGPASSWORD` and `MYSQL_PWD` and hands them to `docker exec` by name. `tests/e2e-retention.sh` holds `posts` locked so the script's `DELETE` waits, reads every command line on the machine and in the database container meanwhile, and requires none to carry the password (compared through a file, never printed); a new plant puts the old line back and the test has to notice.
