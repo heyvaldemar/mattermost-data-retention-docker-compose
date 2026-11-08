@@ -5,3 +5,4 @@
 "mattermost-retention.sh"	"select thumbnailpath from fileinfo where createat < $delete_before;\" >> \"$PATHS_LIST\""	"select 1 where false;\" >> \"$PATHS_LIST\""	"thumbnails of expired uploads left behind"
 "mattermost-retention.sh"	"find \"$DATA_PATH\" -mindepth 1 -type d -empty -delete"	"true"	"emptied directories left behind"
 "mattermost-retention.sh"	"-t -c \"delete from fileinfo where createat < $delete_before;\""	"-t -c \"select 1;\""	"expired file records left in the database"
+"mattermost-retention.sh"	"docker exec -e PGPASSWORD -e MYSQL_PWD $POSTGRES_CONTAINER_ID"	"docker exec -e PGPASSWORD=$DB_PASS $POSTGRES_CONTAINER_ID"	"the password back on docker's command line"

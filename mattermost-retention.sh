@@ -63,7 +63,11 @@ if [ -z "$MATTERMOST_CONTAINER_ID" ]; then
     exit 1
 fi
 
-DB_DOCKER_CMD="docker exec -e PGPASSWORD=$DB_PASS $POSTGRES_CONTAINER_ID"
+# The password reaches docker by name and each client in its environment,
+# never as an argument: every user on the host reads a process's arguments
+# with ps, for as long as it runs. psql reads PGPASSWORD, mysql MYSQL_PWD.
+export PGPASSWORD="$DB_PASS" MYSQL_PWD="$DB_PASS"
+DB_DOCKER_CMD="docker exec -e PGPASSWORD -e MYSQL_PWD $POSTGRES_CONTAINER_ID"
 
 LOG_FILE_PATH="$SCRIPT_DIR/$(basename "$0" .sh).log"
 
@@ -103,13 +107,13 @@ case $DB_DRIVE in
         echo "Using mysql database."
 
         # Get the list of files to be removed
-        $DB_DOCKER_CMD mysql --password="$DB_PASS" --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select path from FileInfo where createat < $delete_before;" > "$PATHS_LIST"
-        $DB_DOCKER_CMD mysql --password="$DB_PASS" --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select thumbnailpath from FileInfo where createat < $delete_before;" >> "$PATHS_LIST"
-        $DB_DOCKER_CMD mysql --password="$DB_PASS" --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select previewpath from FileInfo where createat < $delete_before;" >> "$PATHS_LIST"
+        $DB_DOCKER_CMD mysql --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select path from FileInfo where createat < $delete_before;" > "$PATHS_LIST"
+        $DB_DOCKER_CMD mysql --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select thumbnailpath from FileInfo where createat < $delete_before;" >> "$PATHS_LIST"
+        $DB_DOCKER_CMD mysql --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="select previewpath from FileInfo where createat < $delete_before;" >> "$PATHS_LIST"
 
         # Cleanup db
-        $DB_DOCKER_CMD mysql --password="$DB_PASS" --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="delete from Posts where createat < $delete_before;"
-        $DB_DOCKER_CMD mysql --password="$DB_PASS" --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="delete from FileInfo where createat < $delete_before;"
+        $DB_DOCKER_CMD mysql --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="delete from Posts where createat < $delete_before;"
+        $DB_DOCKER_CMD mysql --user="$DB_USER" --host="$DB_HOST" --database="$DB_NAME" --execute="delete from FileInfo where createat < $delete_before;"
     ;;
   *)
         echo "Unknown DB_DRIVE option. Currently ONLY mysql AND postgres are available."
