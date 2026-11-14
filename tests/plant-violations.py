@@ -8,7 +8,10 @@ which has to pass, then on one copy per plant, each of which has to fail. A
 plant whose text is no longer in the file fails the run too, so the tests
 cannot fall behind the code unnoticed.
 
-    ./tests/plant-violations.py -- <the test command, run inside each copy>
+    ./tests/plant-violations.py [--plants tests/<file>.tsv] -- <the test command, run inside each copy>
+
+--plants names another list of plants (default tests/plants.tsv), so a test
+that takes minutes is only shown the plants it exists for.
 
 A literal {dir} in the command is replaced by the copy's path.
 """
@@ -37,14 +40,20 @@ def main():
     if "--" not in sys.argv or sys.argv.index("--") == len(sys.argv) - 1:
         sys.exit(__doc__)
     cmd = sys.argv[sys.argv.index("--") + 1:]
+    opts = sys.argv[1:sys.argv.index("--")]
+    plants_file = os.path.join(ROOT, "tests", "plants.tsv")
+    if opts:
+        if len(opts) != 2 or opts[0] != "--plants":
+            sys.exit(__doc__)
+        plants_file = os.path.join(ROOT, opts[1])
     plants = []
-    with open(os.path.join(ROOT, "tests", "plants.tsv"), encoding="utf-8") as f:
+    with open(plants_file, encoding="utf-8") as f:
         for line in f:
             if line.startswith("#") or not line.strip():
                 continue
             plants.append([json.loads(x) for x in line.rstrip("\n").split("\t")])
     if not plants:
-        sys.exit("tests/plants.tsv has no plants: a test nothing tries to break proves nothing")
+        sys.exit("%s has no plants: a test nothing tries to break proves nothing" % os.path.relpath(plants_file, ROOT))
 
     work = copy()
     r = run(cmd, work)
