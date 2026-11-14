@@ -7,7 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Fixed
+
+- **The script deletes from its own Mattermost, not from the first database
+  on the host.** It found the database by taking the first `docker ps` line
+  whose image looked like postgres or mysql. On a host with more than one
+  stack that was whichever container started last, possibly another stack's
+  database; in the template's own stack it could be the `backups` container,
+  which runs the postgres image too; and once a digest-pinned tag had moved on
+  the host, `docker ps` showed an image id instead of a name and nothing was
+  found. Containers are now found by the labels Docker Compose puts on them:
+  the `mattermost` service, and the database service of the same compose
+  project. When Mattermost runs in more than one project the script refuses
+  until `COMPOSE_PROJECT` names one, and a project without the service is
+  refused, not guessed. Deployments without compose still work by image name,
+  but only when a single container matches; with several it asks for
+  `DB_CONTAINER` instead of taking the first.
+
+### Added
+
+- **`COMPOSE_PROJECT`, `MATTERMOST_SERVICE` and `DB_SERVICE`.** The project
+  defaults to the one Mattermost runs in, the services to `mattermost` and to
+  `DB_DRIVE`. `MATTERMOST_CONTAINER` alone now brings the database of its own
+  compose project with it; `DB_CONTAINER` still overrides everything.
+- **`tests/e2e-discovery.sh`** runs two compose projects of the same stack side
+  by side and checks every run of the script against both: the project it was
+  pointed at or found loses its expired data, the other keeps every row and
+  file, and the ambiguous cases refuse and delete nothing.
+  `tests/plants-discovery.tsv` puts five wrong discoveries back, the old one
+  among them, and each has to fail it; `tests/plant-violations.py` takes
+  `--plants` for that.
 
 ## [1.1.1] - 2026-11-08
 

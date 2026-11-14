@@ -34,7 +34,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/mnt" -w /mnt \
             koalaman/shellcheck-alpine:stable \
-            shellcheck ./*.sh
+            shellcheck ./*.sh tests/*.sh
 
       - name: actionlint (GitHub Actions workflow linting)
         run: |
@@ -63,3 +63,25 @@ jobs:
       # copy of the script, and the run fails if the test stays green.
       - name: The test, shown each violation it exists for
         run: python3 tests/plant-violations.py -- ./tests/e2e-retention.sh
+
+  discovery-test:
+    name: Two stacks on one host, and the script finds its own containers
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Two compose projects run the same Mattermost-shaped stack side by side
+      # (tests/discovery-compose.yml), each with a postgres service and a
+      # backups container on the same image. Every run of the script is
+      # checked against both: the project it was pointed at, or found, loses
+      # its expired data, and the other keeps every row and file.
+      - name: Two stacks on one host, and the script deletes from its own
+        run: ./tests/e2e-discovery.sh
+
+      - name: The two-stack test, shown each wrong discovery
+        run: python3 tests/plant-violations.py --plants tests/plants-discovery.tsv -- ./tests/e2e-discovery.sh

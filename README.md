@@ -6,11 +6,11 @@
 
 `mattermost-retention.sh` keeps a dockerized Mattermost server down to a fixed number of days of history: it deletes older posts from the database, shreds the matching uploaded files, and prunes empty data directories. Team Edition has no built-in data retention (that's an Enterprise feature). This script is the self-hosted answer.
 
-Works with the [mattermost-traefik-letsencrypt-docker-compose](https://github.com/heyvaldemar/mattermost-traefik-letsencrypt-docker-compose) template out of the box, and with any Docker deployment using the official `mattermost/*` images and a `postgres:`/`mysql:` database container.
+Works with the [mattermost-traefik-letsencrypt-docker-compose](https://github.com/heyvaldemar/mattermost-traefik-letsencrypt-docker-compose) template out of the box, with any Docker Compose deployment of Mattermost, and with other Docker deployments of the official `mattermost/*` images when you name the containers or only one database container runs on the host.
 
 ## How it works
 
-1. Finds the database and Mattermost containers by image name, no fixed container names required.
+1. Finds the Mattermost container and its database by the labels Docker Compose puts on them: the `mattermost` service, and the database service of the same compose project, so another stack's database on the same host is never touched. With Mattermost running in more than one compose project it refuses until `COMPOSE_PROJECT` names one. Without compose it looks for the containers by image and accepts only a single match. `DB_CONTAINER` and `MATTERMOST_CONTAINER` override all of it.
 2. Computes the cutoff (`RETENTION` days ago) and collects the file paths of expired uploads from the database.
 3. Deletes expired rows from `posts` and `fileinfo`.
 4. Shreds the expired files and prunes empty directories via a throwaway helper container that shares the Mattermost container's volumes: current Mattermost images are distroless (no shell inside), so `docker exec` file cleanup stopped being possible.
@@ -46,6 +46,11 @@ All settings and their defaults:
 | `DATA_PATH` | `/mattermost/data/` | data directory inside the Mattermost container |
 | `INSTALL_CRON` | `true` | maintain the daily 08:00 cron entry |
 | `HELPER_IMAGE` | `debian:stable-slim` | image used for the file-deletion helper |
+| `COMPOSE_PROJECT` | the project Mattermost runs in | compose project to clean; needed when more than one runs Mattermost |
+| `MATTERMOST_SERVICE` | `mattermost` | compose service of the Mattermost server |
+| `DB_SERVICE` | `DB_DRIVE` | compose service of the database |
+| `MATTERMOST_CONTAINER` | - | Mattermost container name or id; skips discovery, and the database comes from its compose project |
+| `DB_CONTAINER` | - | database container name or id; skips discovery |
 
 Environment variables override the config file: `RETENTION=7 ./mattermost-retention.sh`.
 
@@ -61,9 +66,13 @@ tail -f mattermost-retention.log
 
 The [Retention Script Verification](https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/actions/workflows/retention-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and weekly: shellcheck and actionlint, then [`tests/e2e-retention.sh`](tests/e2e-retention.sh), which boots a real PostgreSQL with Mattermost-shaped tables and a stand-in data volume, seeds posts and uploads 60, 20 and 0 days old, runs the script with `RETENTION=30`, and asserts that only the 60-day-old data is gone: the posts, the file records, the uploads and their thumbnails, and the directories left empty, while the data directory and everything inside the window stay. [`tests/plant-violations.py`](tests/plant-violations.py) then breaks the script six ways on a copy, listed in [`tests/plants.tsv`](tests/plants.tsv), and fails the run if the test stays green through any of them.
 
+[`tests/e2e-discovery.sh`](tests/e2e-discovery.sh) runs two compose projects of the same Mattermost-shaped stack side by side, each with a `postgres` service and a `backups` container on the same image, and checks every run of the script against both: pointed at one project, found as the only one running Mattermost, or given a Mattermost container, the script cleans that project and the other keeps every row and file; with two Mattermost projects and nothing named, with a project that has no such service, or without compose on a host with several database containers, it refuses and deletes nothing. [`tests/plants-discovery.tsv`](tests/plants-discovery.tsv) puts five wrong discoveries back, the old first-postgres-on-the-host among them, and each has to fail it.
+
 ```bash
 ./tests/e2e-retention.sh
 python3 tests/plant-violations.py -- ./tests/e2e-retention.sh
+./tests/e2e-discovery.sh
+python3 tests/plant-violations.py --plants tests/plants-discovery.tsv -- ./tests/e2e-discovery.sh
 ```
 
 ## Security notes

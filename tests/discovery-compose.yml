@@ -1,0 +1,29 @@
+# One Mattermost-shaped stack, shaped like the template's
+# (heyvaldemar/mattermost-traefik-letsencrypt-docker-compose): a `postgres`
+# service, a `mattermost` service holding the data volume, and a `backups`
+# service on the same postgres image. tests/e2e-discovery.sh runs two of these
+# side by side as two compose projects.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=mattermostdb
+      - POSTGRES_USER=mattermostdbuser
+      # By name, from the environment of `docker compose up`.
+      - POSTGRES_PASSWORD
+
+  # The stand-in Mattermost: the script only reads its volumes.
+  mattermost:
+    image: busybox:stable
+    command: ["sleep", "900"]
+    volumes:
+      - data:/mattermost/data
+
+  # The template's backups container runs the postgres image too, so a search
+  # by image name could take it for the database.
+  backups:
+    image: postgres:16
+    command: ["sleep", "900"]
+
+volumes:
+  data:
