@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.2.0] - 2026-11-14
+
 ### Fixed
 
 - **The script deletes from its own Mattermost, not from the first database
@@ -83,5 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plus an integration test against a real PostgreSQL and a seeded data
   volume that asserts expired data is removed and current data survives.
 
-[Unreleased]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/heyvaldemar/mattermost-data-retention-docker-compose/releases/tag/v1.0.0
